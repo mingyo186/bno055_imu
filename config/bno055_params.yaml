@@ -1,0 +1,27 @@
+bno055_imu_node:
+  ros__parameters:
+    # ── Fake Mode ──────────────────────────────────────
+    fake_mode: true             # true: random data, false: real I2C
+
+    # ── I2C Settings ────────────────────────────────────
+    i2c_bus: 1                  # /dev/i2c-1
+    device_address: 0x28        # BNO055 default (COM3=LOW), 0x29 if COM3=HIGH
+
+    # ── Publish Rate ────────────────────────────────────
+    publish_rate: 100.0         # Hz (BNO055 fusion outputs up to 100 Hz)
+
+    # ── TF Frame ────────────────────────────────────────
+    frame_id: "imu_link"
+
+    # ── Operation Mode ──────────────────────────────────
+    #   "ndof"     = 9-axis fusion (accel + gyro + mag)
+    #   "imu"      = 6-axis fusion (accel + gyro, no mag)
+    #   "compass"  = heading from mag + accel
+    #   "m4g"      = accel + mag
+    operation_mode: "ndof"
+
+    # ── Covariance (diagonal) ──────────────────────────
+    orientation_covariance: 0.01    # rad²
+    angular_velocity_covariance: 0.02  # rad²/s²
+    linear_acceleration_covariance: 0.04  # m²/s⁴
+    magnetic_field_covariance: 0.0  # T² (0 = unknown)
