@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
+# Copyright 2025 The bno055_imu Authors
+#
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 """ROS2 node that reads BNO055 over I2C and publishes Imu + MagneticField + Temperature."""
 
 import time
 
+from bno055_imu.bno055_driver import BNO055Driver, FakeBNO055Driver
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.node import Node
-from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import Imu, MagneticField, Temperature
 from std_srvs.srv import Trigger
 
-from bno055_imu.bno055_driver import BNO055Driver, FakeBNO055Driver
-
 
 class BNO055ImuNode(Node):
+    """ROS2 node for the BNO055 9-axis IMU sensor."""
+
     def __init__(self):
         super().__init__('bno055_imu_node')
 
-        # ── Declare parameters ────────────────────────────────────
+        # -- Declare parameters ------------------------------------------------
         self.declare_parameter('fake_mode', True)
         self.declare_parameter('i2c_bus', 1)
         self.declare_parameter('device_address', 0x28)
@@ -28,43 +34,43 @@ class BNO055ImuNode(Node):
         self.declare_parameter('linear_acceleration_covariance', 0.04)
         self.declare_parameter('magnetic_field_covariance', 0.0)
 
-        # ── Read parameters ───────────────────────────────────────
+        # -- Read parameters ---------------------------------------------------
         self.fake_mode = self.get_parameter('fake_mode').value
-        self.bus_num   = self.get_parameter('i2c_bus').value
-        self.address   = self.get_parameter('device_address').value
-        rate           = self.get_parameter('publish_rate').value
-        self.frame_id  = self.get_parameter('frame_id').value
-        self.op_mode   = self.get_parameter('operation_mode').value
-        self.ori_cov   = self.get_parameter('orientation_covariance').value
-        self.gyro_cov  = self.get_parameter('angular_velocity_covariance').value
+        self.bus_num = self.get_parameter('i2c_bus').value
+        self.address = self.get_parameter('device_address').value
+        rate = self.get_parameter('publish_rate').value
+        self.frame_id = self.get_parameter('frame_id').value
+        self.op_mode = self.get_parameter('operation_mode').value
+        self.ori_cov = self.get_parameter('orientation_covariance').value
+        self.gyro_cov = self.get_parameter('angular_velocity_covariance').value
         self.accel_cov = self.get_parameter('linear_acceleration_covariance').value
-        self.mag_cov   = self.get_parameter('magnetic_field_covariance').value
+        self.mag_cov = self.get_parameter('magnetic_field_covariance').value
 
-        # ── Gyro bias (set by calibration) ────────────────────────
+        # -- Gyro bias (set by calibration) ------------------------------------
         self.gyro_bias = [0.0, 0.0, 0.0]
 
-        # ── Initialise driver ─────────────────────────────────────
+        # -- Initialise driver -------------------------------------------------
         self._init_driver()
 
-        # ── Publishers + timer ────────────────────────────────────
-        self.pub_imu  = self.create_publisher(Imu, 'imu/data', 10)
-        self.pub_mag  = self.create_publisher(MagneticField, 'imu/mag', 10)
+        # -- Publishers + timer ------------------------------------------------
+        self.pub_imu = self.create_publisher(Imu, 'imu/data', 10)
+        self.pub_mag = self.create_publisher(MagneticField, 'imu/mag', 10)
         self.pub_temp = self.create_publisher(Temperature, 'imu/temp', 10)
         self.timer = self.create_timer(1.0 / rate, self._timer_cb)
         self.get_logger().info(
             f'Publishing on "imu/data", "imu/mag", "imu/temp" @ {rate} Hz')
 
-        # ── Services ──────────────────────────────────────────────
+        # -- Services ----------------------------------------------------------
         self.create_service(Trigger, 'imu/calibrate', self._calibrate_cb)
         self.create_service(Trigger, 'imu/reset', self._reset_cb)
         self.get_logger().info(
             'Services: "imu/calibrate", "imu/reset"')
 
-        # ── Parameter change callback ─────────────────────────────
+        # -- Parameter change callback -----------------------------------------
         self.add_on_set_parameters_callback(self._on_param_change)
 
-    # ── Driver init helper ───────────────────────────────────────
     def _init_driver(self):
+        """Initialize the sensor driver based on fake_mode parameter."""
         if self.fake_mode:
             self.driver = FakeBNO055Driver()
             self.get_logger().info(
@@ -82,8 +88,8 @@ class BNO055ImuNode(Node):
                 self.get_logger().fatal(f'Failed to open BNO055: {e}')
                 raise
 
-    # ── Timer callback ───────────────────────────────────────────
     def _timer_cb(self):
+        """Read sensor data and publish Imu, MagneticField, and Temperature."""
         try:
             (qw, qx, qy, qz), (gx, gy, gz), (ax, ay, az), \
                 (mx, my, mz), temp = self.driver.read_all()
@@ -99,7 +105,7 @@ class BNO055ImuNode(Node):
 
         stamp = self.get_clock().now().to_msg()
 
-        # ── sensor_msgs/Imu ──────────────────────────────────────
+        # -- sensor_msgs/Imu --------------------------------------------------
         imu_msg = Imu()
         imu_msg.header.stamp = stamp
         imu_msg.header.frame_id = self.frame_id
@@ -110,8 +116,8 @@ class BNO055ImuNode(Node):
         imu_msg.orientation.z = qz
         oc = self.ori_cov
         imu_msg.orientation_covariance = [
-            oc,  0.0, 0.0,
-            0.0, oc,  0.0,
+            oc, 0.0, 0.0,
+            0.0, oc, 0.0,
             0.0, 0.0, oc,
         ]
 
@@ -120,8 +126,8 @@ class BNO055ImuNode(Node):
         imu_msg.angular_velocity.z = gz
         gc = self.gyro_cov
         imu_msg.angular_velocity_covariance = [
-            gc,  0.0, 0.0,
-            0.0, gc,  0.0,
+            gc, 0.0, 0.0,
+            0.0, gc, 0.0,
             0.0, 0.0, gc,
         ]
 
@@ -130,13 +136,13 @@ class BNO055ImuNode(Node):
         imu_msg.linear_acceleration.z = az
         ac = self.accel_cov
         imu_msg.linear_acceleration_covariance = [
-            ac,  0.0, 0.0,
-            0.0, ac,  0.0,
+            ac, 0.0, 0.0,
+            0.0, ac, 0.0,
             0.0, 0.0, ac,
         ]
         self.pub_imu.publish(imu_msg)
 
-        # ── sensor_msgs/MagneticField ────────────────────────────
+        # -- sensor_msgs/MagneticField -----------------------------------------
         mag_msg = MagneticField()
         mag_msg.header.stamp = stamp
         mag_msg.header.frame_id = self.frame_id
@@ -145,13 +151,13 @@ class BNO055ImuNode(Node):
         mag_msg.magnetic_field.z = mz
         mc = self.mag_cov
         mag_msg.magnetic_field_covariance = [
-            mc,  0.0, 0.0,
-            0.0, mc,  0.0,
+            mc, 0.0, 0.0,
+            0.0, mc, 0.0,
             0.0, 0.0, mc,
         ]
         self.pub_mag.publish(mag_msg)
 
-        # ── sensor_msgs/Temperature ──────────────────────────────
+        # -- sensor_msgs/Temperature -------------------------------------------
         temp_msg = Temperature()
         temp_msg.header.stamp = stamp
         temp_msg.header.frame_id = self.frame_id
@@ -159,8 +165,8 @@ class BNO055ImuNode(Node):
         temp_msg.variance = 0.0
         self.pub_temp.publish(temp_msg)
 
-    # ── Service: /imu/calibrate ──────────────────────────────────
     def _calibrate_cb(self, request, response):
+        """Calibrate the gyroscope by collecting samples and computing bias."""
         if self.fake_mode:
             response.success = True
             response.message = 'Calibration complete (fake)'
@@ -196,8 +202,8 @@ class BNO055ImuNode(Node):
         self.get_logger().info(response.message)
         return response
 
-    # ── Service: /imu/reset ──────────────────────────────────────
     def _reset_cb(self, request, response):
+        """Reset gyro bias and reinitialize the sensor driver."""
         self.gyro_bias = [0.0, 0.0, 0.0]
         self.driver.close()
         self._init_driver()
@@ -207,8 +213,8 @@ class BNO055ImuNode(Node):
         self.get_logger().info(response.message)
         return response
 
-    # ── Runtime parameter change ─────────────────────────────────
     def _on_param_change(self, params):
+        """Handle runtime parameter changes for publish_rate."""
         for param in params:
             if param.name == 'publish_rate':
                 new_rate = param.value
@@ -223,6 +229,7 @@ class BNO055ImuNode(Node):
 
 
 def main(args=None):
+    """Entry point for the BNO055 IMU node."""
     rclpy.init(args=args)
     node = BNO055ImuNode()
     try:
@@ -232,7 +239,10 @@ def main(args=None):
     finally:
         node.driver.close()
         node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 
 if __name__ == '__main__':
