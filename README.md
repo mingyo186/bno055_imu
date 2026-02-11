@@ -12,6 +12,25 @@ ROS 2 Jazzy driver for the Bosch BNO055 9-axis absolute orientation IMU over I2C
 - Configurable operation mode: NDOF, IMU, Compass, M4G
 - Calibration status readable from the BNO055
 
+## Why this package?
+
+There is an existing ROS2 BNO055 driver ([flynneva/bno055](https://github.com/flynneva/bno055)). This package takes a different approach:
+
+| Feature | flynneva/bno055 | This package |
+|---|---|---|
+| **fake_mode** | Not supported | Supported (default `true`) |
+| **Calibrate / Reset services** | Read-only (returns current offsets) | Auto-calibrate (2 s sampling) + reset |
+| **Runtime parameter change** | Not supported | `publish_rate` changeable via `ros2 param set` |
+| **ROS2 Jazzy** | Not explicitly tested | Tested on Jazzy |
+| **I2C library** | `smbus` | `smbus2` |
+| **UART support** | Yes | No (I2C only) |
+| **Axis remapping** | Yes (P0–P7) | No |
+| **Topics** | 6 (imu, imu_raw, mag, grav, temp, calib_status) | 3 (imu/data, imu/mag, imu/temp) |
+| **colcon test** | No launch tests | Full launch tests (28 tests, 0 failures) |
+
+**Choose this package** if you need fake_mode for CI/testing, simple calibration services, or a lightweight Jazzy-tested driver.
+**Choose flynneva/bno055** if you need UART support or axis remapping.
+
 ## Prerequisites
 
 - ROS 2 Jazzy
