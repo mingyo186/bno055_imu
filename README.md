@@ -101,9 +101,34 @@ bno055_imu/
 ├── bno055_imu/
 │   ├── __init__.py
 │   └── bno055_driver.py
-└── nodes/
-    └── bno055_node.py
+├── nodes/
+│   └── bno055_node.py
+└── test/
+    └── test_bno055_node.py
 ```
+
+## Test Results
+
+Tested on Ubuntu 24.04 (WSL2) with `fake_mode: true`.
+
+```
+$ colcon test --packages-select bno055_imu
+$ colcon test-result --verbose
+Summary: 28 tests, 0 errors, 0 failures, 0 skipped
+```
+
+| Test Category | Test | Result |
+|---|---|---|
+| **Topics** | `imu/data` publishes `sensor_msgs/Imu` | PASS |
+| **Topics** | `imu/mag` publishes `sensor_msgs/MagneticField` | PASS |
+| **Topics** | `imu/temp` publishes `sensor_msgs/Temperature` | PASS |
+| **Topics** | `frame_id == "imu_link"` | PASS |
+| **Topics** | Temperature in range 10-40 °C | PASS |
+| **Services** | `imu/calibrate` returns `success=True` | PASS |
+| **Services** | `imu/reset` returns `success=True` | PASS |
+| **Parameters** | `publish_rate` runtime change to 20.0 Hz | PASS |
+| **Shutdown** | Clean exit (code 0, -2, or -15) | PASS |
+| **Linting** | pep257, flake8, copyright, xmllint | PASS |
 
 ## License
 
